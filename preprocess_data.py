@@ -31,7 +31,7 @@ def parse_metadata(df):
     df[columns] = df[columns].astype(str)
     
     # Create a categorical data type for stiffness
-    stiff_type = CategoricalDtype(categories=['0.2', '2.0', '16.0', '64.0'], ordered=True)
+    stiff_type = CategoricalDtype(categories=['0.2', '2.0', '16.0', '32.0', '64.0'], ordered=True)
     df.stiffness = df.stiffness.astype(stiff_type)
     
     # Create a unique label for each cell
