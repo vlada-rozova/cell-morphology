@@ -73,16 +73,12 @@ def random_search_param(model, X_train, y_train, param_grid=None):
     
     return random_search.best_estimator_
 
-def train_test(model, reg, X_train, X_test, y_train, y_test):
+def test_rf_model(model, reg, X_train, X_test, y_train, y_test):
     """
-    Train and evaluate a model.
+    Evaluate the best model.
     Set parameter `reg` to 1 for regression
     or 0 for classificcation.
     """
-    
-    # Train the model
-    model.fit(X_train, y_train)
-    print(model, '\n')
     
     if reg:
         # Baseline

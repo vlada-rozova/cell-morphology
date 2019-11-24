@@ -49,7 +49,8 @@ def as_stiff_type(x):
     Convert stiffness values to a custom categorical type.
     """
     # Create a categorical data type for stiffness
-    stiff_type = CategoricalDtype(categories=['0.2', '0.5', '2.0', '8.0', '16.0', '32.0', '64.0'], ordered=True)
+    #stiff_type = CategoricalDtype(categories=['0.2', '0.5', '2.0', '8.0', '16.0', '32.0', '64.0'], ordered=True)
+    stiff_type = CategoricalDtype(categories=['0.2', '2.0', '16.0', '32.0', '64.0'], ordered=True)
     return x.astype(stiff_type)
     
     
@@ -87,6 +88,7 @@ def rename_columns(df):
     df.columns = [col.replace('_origwga', '_wga', 1) for col in df.columns]
     df.columns = [col.replace('_origker', '_ker', 1) for col in df.columns]
     df.columns = [col.replace('_origvim', '_vim', 1) for col in df.columns]
+    df.columns = [col.replace('_origecad', '_ecad', 1) for col in df.columns]
     
     # Coordinates in X
     df.columns = [col.replace('_x', 'X', 1) for col in df.columns]
@@ -179,14 +181,13 @@ def merge_neighbors(df, df_n):
         df.drop(dupl_cols, axis=1, inplace=True)
 
 
-def import_cell_data(data_path=DATA_PATH, suffix='', cytoplasm=False, biomarkers=False):
+def import_cell_data(data_path=DATA_PATH, suffix='', cytoplasm=False, biomarkers=False, neighbours=False):
     """ 
     Import all the data and then 
     call functions to parse metadata, 
     rename and rearrange columns and merge datasets.
     """
     cells = load_data(filename=suffix + 'Cells.csv')
-    neighbors = load_data(filename=suffix + 'Neighbours.csv')
     nuclei = load_data(filename=suffix + 'Nuclei.csv')
     info = load_data(filename=suffix + 'Image.csv')
     
@@ -198,9 +199,11 @@ def import_cell_data(data_path=DATA_PATH, suffix='', cytoplasm=False, biomarkers
         print('The numbers of cells and nuclei correspond to each other.\n')
     else:
         print('Found {} cells and {} nuclei'.format(cells.shape[0], nuclei.shape[0]))
-        
-    # Merge neighbours
-    merge_neighbors(cells, neighbors)
+    
+    if neighbours:
+        neighbors = load_data(filename=suffix + 'Neighbours.csv')
+        # Merge neighbours
+        merge_neighbors(cells, neighbors)
     
     # Parse and clean metadata
     parse_metadata(cells)
@@ -226,20 +229,36 @@ def import_cell_data(data_path=DATA_PATH, suffix='', cytoplasm=False, biomarkers
         # Merge with the main dataset
         measurements = merge_datasets(measurements, cytoplasm, suffixes=['_cyto']) 
         
+    ###
+    #measurements = measurements.loc[measurements.combination == "B"]
+    ###
+        
     if biomarkers:
-        #biomarkers = load_data(filename=suffix + 'Biomarkers_Cells.csv')
-        print('Read biomarkers normalised by to min gain')
-        biomarkers = load_data(filename='Biomarkers_Cells.csv')
-        print('Biomarkers were measured for {} cells.\n'.format(biomarkers.shape[0]))
+        print('Reading the dataset with E-cadherin...')
+        df = load_data(filename='Ecadherin_Cells.csv')
+        print('E-cadherin was measured for {} cells.\n'.format(df.shape[0]))
         
         # Parse and clean metadata
-        parse_metadata(biomarkers)
+        parse_metadata(df)
         
         # Rename columns
-        rename_columns(biomarkers)
+        rename_columns(df)
         
         # Merge with the main dataset
-        measurements = merge_datasets(measurements, biomarkers) 
+        measurements = merge_datasets(measurements, df) 
+        
+        print('Reading the dataset with Vimentin and Cytokeratins...')
+        df = load_data(filename='Biomarkers_Cells.csv')
+        print('Vimentin and Cytokeratins were measured for {} cells.\n'.format(df.shape[0]))
+        
+        # Parse and clean metadata
+        parse_metadata(df)
+        
+        # Rename columns
+        rename_columns(df)
+        
+        # Merge with the main dataset
+        measurements = merge_datasets(measurements, df) 
     
     # Move "label" column to front
     measurements = move_column(measurements, 'label', 0)
@@ -350,8 +369,7 @@ def clean_data(df):
     uninformative/duplicated columns and location measurements.
     """
     # Check if there are any missing values
-    assert df.isnull().sum().sum() == 0
-    # measurements[measurements.isnull().sum(axis=1) > 0]
+    #assert df.isnull().sum().sum() == 0
     
     print("Initial shape is:", df.shape)
     
@@ -380,7 +398,7 @@ def clean_data(df):
     return df
 
 
-def select_features(df, filename='selected_columns.txt'):
+def select_features(df, filename='selected_columns.txt', cols='geom'):
     """
     Load the list of manually selected columns
     and return a copy of the dataset containing only
@@ -388,10 +406,12 @@ def select_features(df, filename='selected_columns.txt'):
     """
     with open(filename, 'r') as file:
         selected_cols = [line.rstrip('\n') for line in file]
-    
-    df_fs = pd.concat([df.loc[:, 'label' : 'well'], df[selected_cols]], axis=1)
-    
-    return df_fs
+        
+    if cols == 'geom':
+        geom_selected_cols = [col for col in selected_cols if 'dapi' not in col and 'wga' not in col]
+        return df[geom_selected_cols]
+        
+    return pd.concat([df.loc[:, 'label' : 'well'], df[selected_cols]], axis=1)
     
     
 def undersample(df, n_samples):
