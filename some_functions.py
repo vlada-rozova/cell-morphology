@@ -69,6 +69,9 @@ def create_palette(df, by='stiffness', show=False):
         palette = {df.combination.unique()[0] : sns.color_palette("RdBu", 10)[1],
                    df.combination.unique()[1] : sns.color_palette("RdBu", 10)[8]}
         row_colors = df.combination.map(palette)
+    elif by == 'clumped':
+        palette = {0 : sns.color_palette("PRGn", 20)[15], 1 : sns.color_palette("PRGn", 20)[4]}
+        row_colors = df.clumped.map(palette)
         
     if show:
 #         print(list(palette.keys()))
@@ -244,4 +247,4 @@ def stat_annot(df, by, col, x_start, x_end, signif, ylim, kind='barplot'):
         
 def upper_whisker(x):
     iqr = x.quantile(0.75) - x.quantile(0.25)
-    return x.median() + 1.5 * iqr
+    return x.quantile(0.75) + 1.5 * iqr
