@@ -163,6 +163,7 @@ def merge_neighbors(df, df_n):
     
     # Merge dataframes
     neighb = pd.merge(df_m, df_n, how='inner', on=cols)
+    assert neighb.shape[0] == df_m.shape[0]
     
     # Assign values to the original dataframe
     df.loc[:, 'Neighbors_AngleBetweenNeighbors_3' : 'Number_Object_Number'] = \
@@ -202,6 +203,7 @@ def import_cell_data(data_path=DATA_PATH, suffix='', cytoplasm=False, biomarkers
     
     if neighbours:
         neighbors = load_data(filename=suffix + 'Neighbours.csv')
+
         # Merge neighbours
         merge_neighbors(cells, neighbors)
     
@@ -457,6 +459,13 @@ def cv_ratio(df, col1='ctcf_ker', col2='ctcf_vim'):
 
 def nc_ratio(df):
     df['ncr'] = df.area_nucl / df.area_cyto
+    return df
+
+def frac_on_edge(df, biom):
+    total = 'integratedintensity_' + biom
+    edge = 'integratedintensityedge_' + biom
+    new = 'intensityedgefrac_' + biom
+    df[new] = 100 * df[edge] / df[total]
     return df
 
 def phenotype(df, use, cols=('meanintensity_ker', 'meanintensity_vim')):

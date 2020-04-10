@@ -59,7 +59,7 @@ def create_palette(df, by='stiffness', show=False):
         if n_levels == 2:
             palette = {0 : sns.color_palette("PRGn", 20)[15], 1 : sns.color_palette("PRGn", 20)[4]}
         else:
-            palette = dict(zip(range(n_levels), sns.color_palette("Set2", n_levels)))
+            palette = dict(zip(df.cluster.unique(), sns.color_palette("Set2", n_levels)))
         row_colors = df.cluster.map(palette)
     elif by == 'biom':
         palette = {df.biom.unique()[0] : sns.color_palette("RdBu", 10)[1],
@@ -69,9 +69,9 @@ def create_palette(df, by='stiffness', show=False):
         palette = {df.combination.unique()[0] : sns.color_palette("RdBu", 10)[1],
                    df.combination.unique()[1] : sns.color_palette("RdBu", 10)[8]}
         row_colors = df.combination.map(palette)
-    elif by == 'clumped':
-        palette = {0 : sns.color_palette("PRGn", 20)[15], 1 : sns.color_palette("PRGn", 20)[4]}
-        row_colors = df.clumped.map(palette)
+    elif by == 'isclumped':
+        palette = {0 : sns.color_palette("Set3", 6)[4], 1 : sns.color_palette("Set3", 6)[5]}
+        row_colors = df.isclumped.map(palette)
         
     if show:
 #         print(list(palette.keys()))
@@ -127,7 +127,10 @@ def hc(df, cols, n_clusters=2, save=True):
 #         df['cluster'] = np.where(agg.labels_ == 1, 1, 2)
 #     else:
 #         df['cluster'] = agg.labels_
-    df['cluster'] = agg.labels_
+    df['cluster'] = agg.labels_ + 1
+    
+    cluster_type = CategoricalDtype(categories=list(range(1, n_clusters+1)), ordered=True)
+    df.cluster = df.cluster.astype(cluster_type)
 
     row_colors, palette = create_palette(df, by='cluster')
 
@@ -152,7 +155,7 @@ def ttest(df, by, col, equal_var, transform=None, verbose=True):
     x_end = []
     signif = []
     
-    group = df[by].unique()
+    group = df[by].unique().sort_values()
     for i in range(len(group) - 1):
         x1 = df.loc[df[by] == group[i], col]
         x2 = df.loc[df[by] == group[i + 1], col]
@@ -224,7 +227,7 @@ def stat_annot(df, by, col, x_start, x_end, signif, ylim, kind='barplot'):
     """
     Add annotation to show the results of statistical testing.
     """
-    s = df[by].unique()
+    s = df[by].unique().sort_values()
     h = (ylim[1] - ylim[0])/50
     
     for x1, x2, label in zip(x_start, x_end, signif):
